@@ -1,0 +1,27 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor / OS junk
+.vscode/
+.idea/
+.DS_Store
+
+# Virtual environment and YOLO
+.env
+.env.example
+venv/
+.venv
+runs/
+data/
+
+data/
+*.pt
+*.pth
+*.onnx
+*.engine
+wandb/
+mlruns/
+.pytest_cache/
+*.egg-info/

@@ -1,0 +1,44 @@
+# Core
+torch>=2.0
+torchvision
+numpy
+opencv-python
+pillow
+
+# Video / Action recognition
+pytorchvideo
+mediapipe
+av
+
+# Training
+wandb
+omegaconf
+tqdm
+einops
+
+# Eval
+scikit-learn
+matplotlib
+seaborn
+pandas
+
+# Serving
+fastapi
+uvicorn[standard]
+websockets
+python-multipart
+python-dotenv
+
+# Export
+onnx
+onnxruntime-gpu
+
+# MLOps
+prometheus-client
+mlflow
+
+# Dev
+pytest
+pytest-asyncio
+black
+ruff
