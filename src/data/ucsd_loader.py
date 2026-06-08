@@ -11,6 +11,8 @@ from PIL import Image
 import torch
 from torch.utils.data import Dataset
 
+from src.data.video_transforms import transform
+
 
 class UCSDDataset(Dataset):
     """
@@ -126,11 +128,11 @@ class UCSDDataset(Dataset):
 
 if __name__ == "__main__":
     # Run sanity check
-    ds_train = UCSDDataset(root="data/ucsd/raw", subset="ped2", split="train")
+    ds_train = UCSDDataset(root="data/ucsd/raw", subset="ped2", transform=transform, split="train")
     print(f"Train: {len(ds_train.clips)} clips, {len(ds_train)} windows")
     print(f"First clip shape: {ds_train.clips[0].shape}")
 
-    ds_test = UCSDDataset(root="data/ucsd/raw", subset="ped2", split="test")
+    ds_test = UCSDDataset(root="data/ucsd/raw", subset="ped2", transform=transform, split="test")
     print(f"Test: {len(ds_test.clips)} clips, {len(ds_test)} windows")
     print(f"First label sum: {ds_test.labels[0].sum()}/{len(ds_test.labels[0])}")
 
@@ -149,3 +151,6 @@ if __name__ == "__main__":
     # Random middle sample
     sample, label = ds_train[len(ds_train) // 2]
     print(f"\nMiddle train sample shape: {sample.shape}")
+
+    # Transform check
+    print(sample.shape)  # torch.Size([16, 1, 256, 256])
