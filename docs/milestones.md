@@ -102,3 +102,98 @@ val loss converged to ~0.00104. Reconstruction quality was high.
 - [x] W&B training run (`m1-vanilla-ae-ped2`)
 - [x] Pipeline working, code committed
 - [x] milestones.md M1 section complete
+
+---
+
+## M2 — Memory-Augmented Autoencoder (MemAE)
+
+**Date:** 10 June 2026
+**Branch / tag:** `m2`
+**W&B runs:** `m2-memae-ped2` (multiple, N/lambda sweep)
+
+### Problem
+
+M1 showed over-generalization: the vanilla AE reconstructs anomalies almost as
+well as normal frames (AUC 0.701, heavily overlapping error distributions). The
+plan: insert a memory bank between encoder and decoder (Gong et al. 2019), so the
+decoder can only reconstruct from stored normal prototypes. Anomalies, absent
+from memory, should reconstruct poorly -> sharper separation.
+
+Done criterion (planned): UCSD Ped2 frame-level AUC >= 0.85 (literature ~0.94).
+
+### Approach
+
+**Backbone unchanged from M1** (clean ablation): same 3D conv encoder/decoder,
+same 16:1 bottleneck `(16,4,16,16)`. The only addition is a memory module
+between encoder and decoder, plus an entropy term in the loss.
+
+**Memory module.** Bottleneck feature reshaped to queries `(B, 1024, 16)` (each
+spatial-temporal location is a query of dim C=16). Cosine similarity vs an
+`(N, 16)` learnable memory bank -> softmax -> hard-shrinkage sparse addressing
+(threshold lambda) -> renormalize -> weighted sum of memory slots -> reshaped
+back. Returns reconstruction + attention weights.
+
+**Loss.** MSE reconstruction + alpha * entropy of attention weights
+(alpha=2e-4). Entropy regularization encourages sparse, peaked addressing.
+
+**Reused unchanged:** loader, scoring (with tuple-output handling), metrics,
+visualization, same sigma=1 smoothing as M1 (fair comparison).
+
+### Result
+
+| N | lambda | active fraction | avg slots/query | Frame-level AUC | EER |
+|---|---|---|---|---|---|
+| M1 (no memory) | — | — | — | **0.701** | 0.406 |
+| 2000 | 1/N | 0.44 | 882 / 2000 | 0.679 | 0.440 |
+| 2000 | 2/N | 0.0003 | 0.5 / 2000 | 0.594 | 0.431 |
+| 2000 | 3/N | 0.0000 | 0.0 / 2000 | 0.373 | 0.623 |
+| 500 | 1/N | 0.42 | 209 / 500 | **0.688** | 0.436 |
+
+**Best M2: N=500, lambda=1/N, AUC 0.688 — below M1's 0.701.**
+**MemAE did not beat the vanilla AE in this setup.**
+
+In the best configuration the mechanism worked correctly: sparsity was healthy
+(209/500 active slots per query), reconstruction stayed close to M1
+(val recon 0.00132 vs M1 0.00104), and entropy fell steadily during training
+(7.1 -> 5.3), confirming the memory module learned peaked addressing.
+
+### Honest notes
+
+- **The mechanism worked; the metric did not.** This is not a broken
+  implementation — shapes are correct, sparsity forms, entropy decreases. MemAE
+  simply did not sharpen separation over the vanilla baseline here.
+- **Sparsity calibration is brittle at large N.** At N=2000, lambda=1/N gave no
+  sparsity (882 active slots) while lambda=2/N collapsed it (0.5 slots) and
+  reconstruction blew up. There was no usable sweet spot — a finding in itself.
+  Reducing N to 500 stabilized calibration (lambda=1/N then gives meaningful
+  sparsity), but the AUC still did not exceed M1.
+- **The error-distribution histogram is essentially identical to M1's:** normal
+  clustered low, anomaly shifted right, but bodies still overlap heavily.
+
+### Lessons (hypotheses for why MemAE did not help here)
+
+1. **The backbone is already heavily constrained.** The 16:1 bottleneck from M1
+   is aggressive; the additional memory bottleneck adds no discriminative power
+   because compression is already saturated. MemAE's gains likely appear with
+   larger, less-constrained backbones.
+2. **Ped2 is small and appearance-dominated.** 16 training clips may be too few
+   for the memory bank to learn a rich distribution of normal prototypes.
+3. **Sparse-addressing calibration is fragile** in this regime (the N=2000
+   lambda cliff), suggesting the softmax temperature / feature scale interact
+   poorly with the paper's recommended lambda range here.
+
+Confirming which hypothesis dominates would require further experiments (wider
+bottleneck, more data) outside M2's scope.
+
+### M2 Done (negative result, documented)
+
+- [x] MemAE implemented faithfully (memory module, sparse addressing, entropy loss)
+- [x] Mechanism verified (sparsity forms, entropy decreases, shapes correct)
+- [x] N/lambda sweep run and documented
+- [x] M1 vs M2 comparison: MemAE (0.688) did not beat vanilla AE (0.701)
+- [x] Honest negative result recorded with hypotheses
+- [x] tag `m2`
+
+This is a documented negative result, not a failure: a faithful paper
+implementation that did not improve the metric in this specific setup, with the
+mechanism verified and the likely causes analyzed.
