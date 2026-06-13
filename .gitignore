@@ -20,6 +20,7 @@ shangai/
 *.pt
 *.pth
 *.onnx
+*.data
 *.engine
 wandb/
 mlruns/

@@ -32,6 +32,7 @@ python-dotenv
 # Export
 onnx
 onnxruntime-gpu
+onnxscript
 
 # MLOps
 prometheus-client
